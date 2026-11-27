@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import Campaign from "../../models/campaign.js";
 import TaskDetails from "../../models/createTask.js";
 import UploadDetails from "../../models/uploadDetails.js";
-import Counter from "../../models/counter.js";
+import Counter from "../../models/Counter.js";
 
 const isValidObjectId = (id) => mongoose.isValidObjectId(id);
 
