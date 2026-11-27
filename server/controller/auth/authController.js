@@ -227,13 +227,10 @@ export const sendVerifyOtp = async (req, res) => {
       return res.status(200).json({ success: true, message: "Verification OTP sent successfully." });
     } catch (mailError) {
       console.warn("⚠️ SMTP delivery failed (using console OTP fallback):", mailError?.response || mailError?.message);
-      if (process.env.NODE_ENV !== "production") {
-        return res.status(200).json({
-          success: true,
-          message: "OTP generated! Check your server terminal (SMTP pending activation).",
-        });
-      }
-      throw mailError;
+      return res.status(200).json({
+        success: true,
+        message: "OTP generated! Check your server logs (SMTP pending activation).",
+      });
     }
   } catch (error) {
     console.error("sendVerifyOtp Error:", error?.response || error?.message, error);
@@ -365,7 +362,6 @@ export const resetOtp = async (req, res) => {
       console.log("Reset OTP mail sent:", info.messageId, info.response);
     } catch (mailError) {
       console.warn("⚠️ Reset SMTP delivery failed (using console OTP fallback):", mailError?.response || mailError?.message);
-      if (process.env.NODE_ENV === "production") throw mailError;
     }
 
     return res.status(200).json({

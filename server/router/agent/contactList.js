@@ -27,12 +27,12 @@ const router = express.Router();
 
 router.use(express.urlencoded({ extended: true }));
 
-router.post("/upload-xlsx", upload.single("file"), handleContactUpload);
-router.post("/add", addContactDetails);
-router.put("/edit/:id", editList);
-router.delete("/delete/:id", deleteList);
-router.get("/get", fetchAllContactList);
-router.get("/get/:id", showcontactDetails);
+router.post("/upload-xlsx", authMiddleware, upload.single("file"), handleContactUpload);
+router.post("/add", authMiddleware, addContactDetails);
+router.put("/edit/:id", authMiddleware, editList);
+router.delete("/delete/:id", authMiddleware, deleteList);
+router.get("/get", authMiddleware, fetchAllContactList);
+router.get("/get/:id", authMiddleware, showcontactDetails);
 
 
 router.post("/call/:customerId", initiateCall);

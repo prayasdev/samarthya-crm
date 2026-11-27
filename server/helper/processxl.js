@@ -2,7 +2,7 @@ import xlsx from "xlsx";
 import fs from "fs";
 import Contact from "../models/contactDetails.js";
 
-export async function processExcelFile(filePath, batchSize = 100) {
+export async function processExcelFile(filePath, userId, batchSize = 100) {
   try {
     const workbook = xlsx.readFile(filePath, { raw: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -47,6 +47,7 @@ export async function processExcelFile(filePath, batchSize = 100) {
         whatsappNo: row.whatsappno || row["whatsapp no"] || "",
         status: row.status,
         purpose: row.purpose || "General",
+        userId,
       }));
 
     if (validContacts.length === 0)

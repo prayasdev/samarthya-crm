@@ -4,7 +4,7 @@ import UploadDetails from "../../models/uploadDetails.js";
 
 export const fetchAllContacts=async(req,res)=>{
   try{
-    const allConcats= await UploadDetails.find({});
+    const allConcats = await UploadDetails.find({ userId: req.user._id });
     res.status(200).json({
       success:true,
       data:allConcats
@@ -19,11 +19,11 @@ export const fetchAllContacts=async(req,res)=>{
 export const getUploadDetail = async (req, res) => {
   try {
     const id = (req.params.id || "").trim();
-    if (!isValidObjectId(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid id" });
     }
 
-    const doc = await UploadDetails.findById(id)
+    const doc = await UploadDetails.findOne({ _id: id, userId: req.user._id })
       .select("name email phoneNo category description userId taskId createdAt updatedAt")
       .lean();
 

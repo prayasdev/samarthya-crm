@@ -12,7 +12,7 @@ export const handleContactUpload = async (req, res) => {
         .json({ success: false, message: "No file uploaded" });
     }
 
-    const result = await processExcelFile(req.file.path);
+    const result = await processExcelFile(req.file.path, req.user._id);
     res.status(200).json({
       success: true,
       ...result,
@@ -44,7 +44,8 @@ export const addContactDetails = async (req, res) => {
       phone,
       whatsappNo,
       status,
-      purpose
+      purpose,
+      userId: req.user._id,
     });
 
     await newContact.save();
@@ -80,7 +81,7 @@ export const editList = async (req, res) => {
     const finalPhone = phoneNo || phone;
 
     // 1. Check in UploadDetails (the primary contacts collection in CRM)
-    const uploadDoc = await UploadDetails.findById(id);
+    const uploadDoc = await UploadDetails.findOne({ _id: id, userId: req.user._id });
     if (uploadDoc) {
       if (name) uploadDoc.name = name.trim();
       if (finalPhone) uploadDoc.phoneNo = finalPhone.trim();
@@ -99,7 +100,7 @@ export const editList = async (req, res) => {
     }
 
     // 2. Fallback check in ContactDetails
-    const contactDoc = await ContactDetails.findById(id);
+    const contactDoc = await ContactDetails.findOne({ _id: id, userId: req.user._id });
     if (contactDoc) {
       if (name) contactDoc.name = name;
       if (email) contactDoc.email = email;
@@ -146,12 +147,12 @@ export const deleteList = async (req, res) => {
     }
 
     // 1. Try deleting from UploadDetails
-    let deletedContact = await UploadDetails.findByIdAndDelete(id);
+    let deletedContact = await UploadDetails.findOneAndDelete({ _id: id, userId: req.user._id });
     let sourceCollection = "UploadDetails";
 
     // 2. If not found in UploadDetails, try ContactDetails
     if (!deletedContact) {
-      deletedContact = await ContactDetails.findByIdAndDelete(id);
+      deletedContact = await ContactDetails.findOneAndDelete({ _id: id, userId: req.user._id });
       sourceCollection = "ContactDetails";
     }
 
@@ -187,7 +188,7 @@ export const deleteList = async (req, res) => {
 
 export const fetchAllContactList = async (req, res) => {
   try {
-    const listOfContacts = await ContactDetails.find({});
+    const listOfContacts = await ContactDetails.find({ userId: req.user._id });
     res.status(200).json({
       success: true,
       data: listOfContacts,
@@ -201,7 +202,7 @@ export const fetchAllContactList = async (req, res) => {
 export const showcontactDetails=async(req,res)=>{
   try{
     const id=req.params.id.trim();
-    const contactList=await ContactDetails.findById(id)
+    const contactList=await ContactDetails.findOne({ _id: id, userId: req.user._id })
     if(!contactList){
       return res.status(400).json({
         success:false,

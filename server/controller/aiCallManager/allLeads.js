@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Calls from "../../models/callHistory.js";
 import UploadDetails from "../../models/uploadDetails.js";
 
@@ -8,8 +9,10 @@ export async function allLeads(req, res) {
     const ps = Math.min(500, Math.max(1, Number(pageSize)));
     const sortDir = String(order).toLowerCase() === "asc" ? 1 : -1;
 
+    const userId = new mongoose.Types.ObjectId(req.user._id);
+
     const pipeline = [
-      { $match: {} }, // Match all customers
+      { $match: { userId } }, // Only match this user's customers
 
       // Lookup latest updated call per customer by updatedAt
       {
