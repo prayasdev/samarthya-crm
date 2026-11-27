@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
   resetOtpExpireAt: { type: Number, default: 0 },
   role: {
     type: String,
-    default: "user",
+    default: "agent",
   },
 });
 

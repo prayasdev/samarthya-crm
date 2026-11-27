@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+import { API_BASE_URL } from "@/config/api";
   MessageCircle,
   Send,
   RefreshCw,
@@ -24,8 +25,7 @@ export default function WhatsAppInbox() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
-  const API_BASE_URL = "http://localhost:4000";
-
+  
   // Normalize phone number for comparison
   const normalizePhone = (phone) => {
     if (!phone) return "";

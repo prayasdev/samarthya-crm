@@ -1,8 +1,9 @@
 
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+import { API_BASE_URL } from "@/config/api";
 
-const API_BASE ="http://localhost:4000";
+const API_BASE =API_BASE_URL;
 
 
 export const fetchCategoryDistribution = createAsyncThunk(

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { CheckCircle2, Send, Sparkles, Clock, CheckCheck, Phone, Mail } from "lucide-react";
 import { generateMessage, generateEmailMessage } from "./gemini";
+import { API_BASE_URL } from "@/config/api";
 
 export default function Sbody({ selectedChannel, onMessageSent }) {
   const [recipientData, setRecipientData] = useState("");
@@ -173,7 +174,7 @@ export default function Sbody({ selectedChannel, onMessageSent }) {
       
       console.log(`📱 Sending ${selectedChannel.toUpperCase()} (${selectedLanguage})`, payload);
       
-      const response = await fetch(`http://localhost:4000${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

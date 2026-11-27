@@ -22,7 +22,10 @@ import aiCallmanager from "./router/aiCall-Manager/index.js";
 import Dashboard from "./router/Dashboard/index.js";
 
 // Twilio client
-const client = twilio(process.env.TWILIO_ACCOUNT_SID_WP, process.env.TWILIO_AUTH_TOKEN_WP);
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID_WP || process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN_WP || process.env.TWILIO_AUTH_TOKEN
+);
 
 // MongoDB connection
 let dbConnected = false;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ConversationList from "@/components/agent-view/whatsapp-inbox/ConversationList";
 import ChatWindow from "@/components/agent-view/whatsapp-inbox/ChatWindow";
+import { API_BASE_URL } from "@/config/api";
 
 export default function WhatsAppInbox() {
   const [conversations, setConversations] = useState([]);
@@ -13,8 +14,7 @@ export default function WhatsAppInbox() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
-  const API_BASE_URL = "http://localhost:4000";
-
+  
   const normalizePhone = (phone) => {
     if (!phone) return "";
     return phone.replace("whatsapp:", "").trim();

@@ -202,7 +202,7 @@ const makeCall = async (contact, campaign) => {
     await callRecord.save();
 
     // Prepare TwiML
-    const wsUrl = process.env.MEDIA_WS_URL_BIKASH;
+    const wsUrl = process.env.MEDIA_WS_URL;
     const purpose = campaign.description || campaign.campaignName;
 
     const twiml = `
@@ -218,14 +218,17 @@ const makeCall = async (contact, campaign) => {
     `;
 
     // Make Twilio call
-    const twilioCall = await client.calls.create({
+    const callPayload = {
       to: contact.phoneNo,
-      from: process.env.TWILIO_NUMBER,
+      from: process.env.TWILIO_NUMBER || process.env.TWILIO_PHONE_NUMBER,
       twiml: twiml,
-      statusCallback: `${process.env.BASE_URL}/api/calls/status-callback`,
-      statusCallbackEvent: ['completed'],
-      statusCallbackMethod: 'POST'
-    });
+    };
+    if (process.env.BASE_URL && process.env.BASE_URL.startsWith("https://")) {
+      callPayload.statusCallback = `${process.env.BASE_URL}/api/calls/status-callback`;
+      callPayload.statusCallbackEvent = ['completed'];
+      callPayload.statusCallbackMethod = 'POST';
+    }
+    const twilioCall = await client.calls.create(callPayload);
 
     console.log(`✓ Call initiated! SID: ${twilioCall.sid}`);
 

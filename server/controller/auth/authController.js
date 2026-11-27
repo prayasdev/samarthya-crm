@@ -1,10 +1,14 @@
 // controllers/authController.js
+import mongoose from "mongoose";
 import User from "../../models/userModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import transporter from "../../config/auth/nodemailer.js";
 import dotenv from "dotenv";
 dotenv.config();
+
+// Temporary in-memory store for unverified registrations (not persisted to DB until OTP verified)
+const pendingRegistrations = new Map();
 
 // Register
 export const register = async (req, res) => {
@@ -26,18 +30,28 @@ export const register = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Remove any stale unverified registration for the same email
+    for (const [id, pending] of pendingRegistrations.entries()) {
+      if (pending.email === email) {
+        pendingRegistrations.delete(id);
+      }
+    }
 
-    const newUser = new User({
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const tempId = new mongoose.Types.ObjectId().toString();
+
+    pendingRegistrations.set(tempId, {
+      _id: tempId,
       userName,
       email,
       password: hashedPassword,
+      role: "agent",
+      verifyOTP: "",
+      verifyOTPExpireAt: 0,
+      isAccountVerified: false,
     });
 
-    const savedUser = await newUser.save();
-    console.log("User saved:", savedUser.email);
-
-    const token = jwt.sign({ id: savedUser._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: tempId }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
@@ -49,25 +63,14 @@ export const register = async (req, res) => {
       path: "/",
     });
 
-    try {
-      const info = await transporter.sendMail({
-        from: process.env.SMTP_MAIL, // verified in Brevo
-        to: email,
-        subject: "Welcome to WhiteSpace",
-        text: `Hello ${userName},\n\nYour account has been successfully created with email: ${email}\n\nThank you for registering!`,
-      });
-      console.log("Email sent:", info.messageId, info.response);
-    } catch (emailError) {
-      console.error("Email sending failed:", emailError?.response || emailError?.message, emailError);
-    }
-
     return res.status(200).json({
       success: true,
-      message: "Registration successful!",
+      message: "Registration initiated! Please verify your email with OTP.",
       user: {
-        id: savedUser._id,
-        userName: savedUser.userName,
-        email: savedUser.email,
+        id: tempId,
+        userName,
+        email,
+        role: "agent",
       },
     });
   } catch (error) {
@@ -199,24 +202,39 @@ export const sendVerifyOtp = async (req, res) => {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const user = await User.findById(userId);
+    const pendingUser = pendingRegistrations.get(String(userId));
+    const dbUser = pendingUser ? null : await User.findById(userId);
+    const user = pendingUser || dbUser;
+
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.isAccountVerified) return res.status(400).json({ success: false, message: 'Account already verified' });
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     user.verifyOTP = otp;
     user.verifyOTPExpireAt = Date.now() + 60 * 60 * 1000; // 1h
-    await user.save();
+    if (dbUser) await dbUser.save();
 
-    const info = await transporter.sendMail({
-      from: process.env.SMTP_MAIL, // verified sender
-      to: user.email,
-      subject: "Your WhiteSpace Verification OTP",
-      text: `Hi ${user.userName},\n\nYour account verification OTP is: ${otp}\n\nThis code is valid for 1 hour.\n\n- WhiteSpace Team`,
-    });
+    console.log(`\n🔑 [OTP] Verification OTP for ${user.email}: ${otp}\n`);
 
-    console.log("OTP mail sent:", info.messageId, info.response);
-    return res.status(200).json({ success: true, message: "Verification OTP sent successfully." });
+    try {
+      const info = await transporter.sendMail({
+        from: process.env.SMTP_MAIL, // verified sender
+        to: user.email,
+        subject: "Your WhiteSpace Verification OTP",
+        text: `Hi ${user.userName},\n\nYour account verification OTP is: ${otp}\n\nThis code is valid for 1 hour.\n\n- WhiteSpace Team`,
+      });
+      console.log("OTP mail sent:", info.messageId, info.response);
+      return res.status(200).json({ success: true, message: "Verification OTP sent successfully." });
+    } catch (mailError) {
+      console.warn("⚠️ SMTP delivery failed (using console OTP fallback):", mailError?.response || mailError?.message);
+      if (process.env.NODE_ENV !== "production") {
+        return res.status(200).json({
+          success: true,
+          message: "OTP generated! Check your server terminal (SMTP pending activation).",
+        });
+      }
+      throw mailError;
+    }
   } catch (error) {
     console.error("sendVerifyOtp Error:", error?.response || error?.message, error);
     return res.status(500).json({ success: false, message: "Internal Server Error while sending OTP." });
@@ -234,7 +252,10 @@ export const verifyEmail = async (req, res) => {
     });
   }
   try {
-    const user = await User.findById(userId);
+    const pendingUser = pendingRegistrations.get(String(userId));
+    const dbUser = pendingUser ? null : await User.findById(userId);
+    const user = pendingUser || dbUser;
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -256,11 +277,28 @@ export const verifyEmail = async (req, res) => {
       });
     }
 
-    user.isAccountVerified = true;
-    user.verifyOTP = null;
-    user.verifyOTPExpireAt = null;
+    let verifyUser;
+    if (pendingUser) {
+      const newUser = new User({
+        _id: pendingUser._id,
+        userName: pendingUser.userName,
+        email: pendingUser.email,
+        password: pendingUser.password,
+        role: "agent",
+        isAccountVerified: true,
+        verifyOTP: null,
+        verifyOTPExpireAt: null,
+      });
+      verifyUser = await newUser.save();
+      pendingRegistrations.delete(String(userId));
+    } else {
+      dbUser.isAccountVerified = true;
+      dbUser.role = dbUser.role === "user" ? "agent" : dbUser.role;
+      dbUser.verifyOTP = null;
+      dbUser.verifyOTPExpireAt = null;
+      verifyUser = await dbUser.save();
+    }
 
-    const verifyUser = await user.save();
     return res.status(200).json({
       success: true,
       message: "Email verified Successfully",
@@ -268,6 +306,7 @@ export const verifyEmail = async (req, res) => {
         id: verifyUser._id,
         userName: verifyUser.userName,
         email: verifyUser.email,
+        role: verifyUser.role,
       },
     });
   } catch (error) {
@@ -314,13 +353,20 @@ export const resetOtp = async (req, res) => {
     user.resetOtpExpireAt = Date.now() + 15 * 60 * 1000; // 15 min
     const resetOtpUser = await user.save();
 
-    const info = await transporter.sendMail({
-      from: process.env.SMTP_MAIL,
-      to: resetOtpUser.email,
-      subject: "Password Reset OTP",
-      text: `Your OTP is ${otp}. This code is valid for 15 minutes.`,
-    });
-    console.log("Reset OTP mail sent:", info.messageId, info.response);
+    console.log(`\n🔑 [RESET OTP] Password Reset OTP for ${resetOtpUser.email}: ${otp}\n`);
+
+    try {
+      const info = await transporter.sendMail({
+        from: process.env.SMTP_MAIL,
+        to: resetOtpUser.email,
+        subject: "Password Reset OTP",
+        text: `Your OTP is ${otp}. This code is valid for 15 minutes.`,
+      });
+      console.log("Reset OTP mail sent:", info.messageId, info.response);
+    } catch (mailError) {
+      console.warn("⚠️ Reset SMTP delivery failed (using console OTP fallback):", mailError?.response || mailError?.message);
+      if (process.env.NODE_ENV === "production") throw mailError;
+    }
 
     return res.status(200).json({
       success: true,

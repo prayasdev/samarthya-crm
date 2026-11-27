@@ -1,8 +1,9 @@
 // src/redux/slices/campaignSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { API_BASE_URL } from "@/config/api";
 
-const API_URL = "http://localhost:4000/api/campaigns";
+const API_URL = `${API_BASE_URL}/api/campaigns`;
 
 export const createNewCampaign = createAsyncThunk(
   "campaigns/create",

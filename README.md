@@ -576,15 +576,7 @@ flowchart LR
 - **Twilio Account**: Account SID, Auth Token, and a phone number enabled for Voice & Media Streams
 - **Deepgram Account**: API key with Voice Agent API access enabled
 
----
 
-### Step 1: Clone the Repository
-```bash
-git clone https://github.com/your-org/samarthya-crm.git
-cd samarthya-crm
-```
-
----
 
 ### Step 2: Configure & Start Voice AI Agent (`agent/`)
 
@@ -853,3 +845,4 @@ As documented in [`docs/task.md`](docs/task.md), the following high-value archit
   <b>Samarthya CRM</b> — Transforming Clinical Healthcare Communications with Autonomous Real-Time Voice AI.
 </p>
 
+```wss://abc-123.ngrok-free.app```

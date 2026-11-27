@@ -12,9 +12,13 @@ import {
   Phone,
   Clock,
   Megaphone,
-  Bot
+  Bot,
+  LogOut
 } from "lucide-react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "@/store/auth-slice";
+import { toast } from "sonner";
 
 // Utility function for className merging
 const cn = (...classes) => {
@@ -276,6 +280,28 @@ export default function SidebarDemo() {
   ];
 
   const [open, setOpen] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      toast.success("Logged out successfully");
+      navigate("/auth/login");
+    } catch (error) {
+      toast.error(error?.message || "Failed to logout. Please try again.");
+    }
+  };
+
+  const userInitials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "A1";
 
   return (
     <div className="h-screen w-full bg-slate-50/70 dark:bg-slate-950 flex flex-col md:flex-row overflow-hidden">
@@ -289,24 +315,42 @@ export default function SidebarDemo() {
               ))}
             </div>
           </div>
-          <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-3 flex flex-col gap-2">
             {open ? (
               <div className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                 <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                  A1
+                  {userInitials}
                 </div>
                 <div className="flex flex-col truncate">
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">Agent Clinical Portal</span>
-                  <span className="text-[11px] text-slate-500 truncate">agent@whitespace.ai</span>
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                    {user?.name || "Agent Clinical Portal"}
+                  </span>
+                  <span className="text-[11px] text-slate-500 truncate">
+                    {user?.email || "agent@whitespace.ai"}
+                  </span>
                 </div>
               </div>
             ) : (
-              <div className="w-10 h-10 mx-auto rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition" title="Agent Clinical Portal">
+              <div className="w-10 h-10 mx-auto rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition" title={user?.name || "Agent Clinical Portal"}>
                 <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-xs">
-                  A1
+                  {userInitials}
                 </div>
               </div>
             )}
+
+            <button
+              onClick={handleLogout}
+              title={!open ? "Logout" : undefined}
+              className={cn(
+                "transition-all duration-150 cursor-pointer",
+                open
+                  ? "w-full flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  : "w-10 h-10 mx-auto flex items-center justify-center rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+              )}
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              {open && <span className="truncate">Logout</span>}
+            </button>
           </div>
         </SidebarBody>
       </Sidebar>

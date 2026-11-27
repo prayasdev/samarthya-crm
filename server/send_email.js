@@ -3,16 +3,26 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const senderEmail = process.env.SENDER_EMAIL || 'your-email@gmail.com';
-const senderPassword = process.env.SENDER_PASSWORD || 'your-app-password';
+const senderEmail = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'your-email@gmail.com';
+const senderPassword = process.env.SENDER_PASSWORD || process.env.SMTP_PASS || 'your-app-password';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: senderEmail,
-    pass: senderPassword
-  }
-});
+const transporter = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: false,
+      auth: {
+        user: senderEmail,
+        pass: senderPassword
+      }
+    })
+  : nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: senderEmail,
+        pass: senderPassword
+      }
+    });
 
 /**
  * Extract subject from email message

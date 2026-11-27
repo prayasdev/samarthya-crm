@@ -1,8 +1,9 @@
 // src/store/call-mannager/aiCallmanage.js
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+import { API_BASE_URL } from "@/config/api";
 
-const API_URL = "http://localhost:4000/api/aiCall";
+const API_URL = `${API_BASE_URL}/api/aiCall`;
 
 const initialState = {
   live: {

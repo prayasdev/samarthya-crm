@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { API_BASE_URL } from "@/config/api";
 
-const API_BASE = "http://localhost:4000/api/aiCall";
+const API_BASE = `${API_BASE_URL}/api/aiCall`;
 
 export const fetchLeads = createAsyncThunk(
   "leads/fetchLeads",

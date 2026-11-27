@@ -52,7 +52,7 @@ const executeCall = async (callData) => {
     const description = contact.description || "";
     console.log(`📝 Description from DB for ${contact.name}: ${description}`);
 
-    const wsUrl = process.env.MEDIA_WS_URL_BIKASH;
+    const wsUrl = process.env.MEDIA_WS_URL;
 
     const twiml = `
       <Response>
@@ -69,14 +69,18 @@ const executeCall = async (callData) => {
     console.log(`WebSocket URL: ${wsUrl}`);
 
     // CREATE CALL
-    const call = await client.calls.create({
+    const fromNumber = process.env.TWILIO_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+    const callPayload = {
       to: contact.phoneNo,
-      from: process.env.TWILIO_NUMBER,
+      from: fromNumber,
       twiml: twiml,
-      statusCallback: `${process.env.SERVER_URL}/api/agent/contactList/status`,
-      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-      statusCallbackMethod: "POST",
-    });
+    };
+    if (process.env.SERVER_URL && process.env.SERVER_URL.startsWith("https://")) {
+      callPayload.statusCallback = `${process.env.SERVER_URL}/api/agent/contactList/status`;
+      callPayload.statusCallbackEvent = ["initiated", "ringing", "answered", "completed"];
+      callPayload.statusCallbackMethod = "POST";
+    }
+    const call = await client.calls.create(callPayload);
 
     // MINIMAL PATCH: Save CallSid first
     await CallLiveStatus.updateOne(
@@ -86,7 +90,7 @@ const executeCall = async (callData) => {
           call_id: call.sid,
           customer_id: customerId,
           to: contact.phoneNo,
-          from: process.env.TWILIO_NUMBER,
+          from: fromNumber,
           last_status: call.status || "initiated",
           updated_at_iso: new Date(),
         },
@@ -138,17 +142,19 @@ export const initiateCall = async (req, res) => {
       </Response>
     `;
 
-
-
     // KEEP ONLY ONE CREATE WITH statusCallback
-    const call = await client.calls.create({
+    const fromNumber = process.env.TWILIO_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+    const callPayload = {
       to: contact.phoneNo,
-      from: process.env.TWILIO_NUMBER,
+      from: fromNumber,
       twiml: twiml,
-      statusCallback: `${process.env.SERVER_API_URL}/call/status`,
-      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-      statusCallbackMethod: "POST",
-    });
+    };
+    if (process.env.SERVER_API_URL && process.env.SERVER_API_URL.startsWith("https://")) {
+      callPayload.statusCallback = `${process.env.SERVER_API_URL}/call/status`;
+      callPayload.statusCallbackEvent = ["initiated", "ringing", "answered", "completed"];
+      callPayload.statusCallbackMethod = "POST";
+    }
+    const call = await client.calls.create(callPayload);
 
     await CallLiveStatus.updateOne(
       { call_id: call.sid },
@@ -157,7 +163,7 @@ export const initiateCall = async (req, res) => {
           call_id: call.sid,
           customer_id: customerId,
           to: contact.phoneNo,
-          from: process.env.TWILIO_NUMBER,
+          from: fromNumber,
           last_status: call.status || "initiated",
           updated_at_iso: new Date(),
         },
