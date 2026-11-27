@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Calls from "../../models/callHistory.js";
 import UploadDetails from "../../models/uploadDetails.js";
 
@@ -10,9 +11,12 @@ export async function pendingFollowups(req, res) {
 
     // Define the valid live call statuses to filter on
     const validStatuses = ["busy", "no-answer", "failed", "cancel"];
+    const userMatch = req.user?._id
+      ? { userId: new mongoose.Types.ObjectId(String(req.user._id)) }
+      : {};
 
     const pipeline = [
-      { $match: {} }, // Get all customers
+      { $match: userMatch }, // Only this user's customers
 
       // Lookup the latest call from Calls collection
       {

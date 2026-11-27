@@ -17,8 +17,9 @@ export async function getCategoryDistribution(req, res) {
     } = req.query;
 
     // Build base match
+    const effectiveUserId = req.user?._id || userId;
     const baseMatch = {};
-    if (userId && isValidObjectId(userId)) baseMatch.userId = new mongoose.Types.ObjectId(String(userId));
+    if (effectiveUserId && isValidObjectId(effectiveUserId)) baseMatch.userId = new mongoose.Types.ObjectId(String(effectiveUserId));
     if (taskId && isValidObjectId(taskId)) baseMatch.taskId = new mongoose.Types.ObjectId(String(taskId));
     if (category) baseMatch.category = String(category).trim();
 

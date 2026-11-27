@@ -3,20 +3,25 @@ import mongoose from "mongoose";
 import Calls from "../../models/callHistory.js";
 import CallLiveStatus from "../../models/callLiveStatus.js";
 import UploadDetails from "../../models/uploadDetails.js";
+import { getUserCustomerMatch } from "../../helper/userScope.js";
 
 const isValidObjectId = (v) => mongoose.isValidObjectId(String(v || "").trim());
 
 export async function getDashboardSummary(req, res) {
   try {
-    const { sinceHours, userId, taskId, category } = req.query;
+    const { sinceHours, taskId, category } = req.query;
+    const userId = req.user?._id || req.query.userId;
+    const customerMatch = userId ? await getUserCustomerMatch(userId) : {};
+
     const timeMatch = {};
     if (sinceHours != null && !Number.isNaN(Number(sinceHours))) {
       timeMatch.updated_at_iso = { $gte: new Date(Date.now() - Number(sinceHours) * 3600 * 1000) };
-    } // 
-    const totalCallsPromise = Calls.distinct("call_id").then((ids) => ids.length); // [web:329]
+    }
+    const totalCallsPromise = Calls.distinct("call_id", customerMatch).then((ids) => ids.length);
 
     // Average call time (hours): coerce duration fields to double
     const avgPromise = Calls.aggregate([
+      { $match: customerMatch },
       {
         $addFields: {
           _durRaw: { $ifNull: ["$duration_seconds", "$call_duration_seconds"] }, // try both [web:309]
@@ -48,6 +53,7 @@ export async function getDashboardSummary(req, res) {
     // Sentiments: normalize case and compute percentages among docs that have sentiment
     const sentimentsPromise = (async () => {
       const base = await Calls.aggregate([
+        { $match: customerMatch },
         { $addFields: { _sentRaw: { $ifNull: ["$sentiment", "$sentiment_overall", ""] } } }, // [web:309]
         { $match: { _sentRaw: { $type: "string" } } },
         { $project: { s: { $toLower: "$_sentRaw" } } }, // [web:320]
@@ -66,7 +72,7 @@ export async function getDashboardSummary(req, res) {
 
     // Acquired attention: canceled/cancel/busy/no-answer/failed with optional filters
     const statusList = ["canceled", "cancel", "busy", "no-answer", "failed"];
-    const liveStatusMatch = { last_status: { $in: statusList }, ...timeMatch };
+    const liveStatusMatch = { last_status: { $in: statusList }, ...timeMatch, ...customerMatch };
     const attentionPipeline = [
       { $match: liveStatusMatch },
       ...(userId || taskId || category

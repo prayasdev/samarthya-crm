@@ -2,13 +2,16 @@
 import Calls from "../../models/callHistory.js";
 import CallLiveStatus from "../../models/callLiveStatus.js";
 import UploadDetails from "../../models/uploadDetails.js";
+import { getUserCustomerMatch } from "../../helper/userScope.js";
 
 // Live monitor: latest per customer, no status filter
 export async function getLiveMonitor(req, res) {
   try {
     const { limit = 50 } = req.query;
+    const customerMatch = req.user?._id ? await getUserCustomerMatch(req.user._id) : {};
 
     const rows = await CallLiveStatus.aggregate([
+      { $match: customerMatch },
       { $sort: { updated_at_iso: -1 } },
 
       // Keep only latest per customer
@@ -75,7 +78,10 @@ export async function fetchAllCalls(req, res) {
     const ps = Math.min(1000, Math.max(1, Number(pageSize)));
     const sortDir = order === "asc" ? 1 : -1;
 
+    const customerMatch = req.user?._id ? await getUserCustomerMatch(req.user._id) : {};
+
     const pipeline = [
+      { $match: customerMatch },
       { $sort: { [sort]: sortDir } },
       { $skip: (p - 1) * ps },
       { $limit: ps },

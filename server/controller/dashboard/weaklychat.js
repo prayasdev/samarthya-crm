@@ -1,5 +1,6 @@
 // controller/dashboard/weeklychart.js
 import Calls from "../../models/callHistory.js";
+import { getUserCustomerMatch } from "../../helper/userScope.js";
 
 export async function getWeeklyPerformance(req, res) {
   try {
@@ -9,10 +10,12 @@ export async function getWeeklyPerformance(req, res) {
       return res.status(400).json({ success: false, message: "Invalid days" });
     }
 
+    const customerMatch = req.user?._id ? await getUserCustomerMatch(req.user._id) : {};
     const now = new Date();
     const since = new Date(now.getTime() - days * 24 * 3600 * 1000);
 
     const rows = await Calls.aggregate([
+      { $match: customerMatch },
       // 1) Coalesce possible timestamp fields
       {
         $addFields: {

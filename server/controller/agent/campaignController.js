@@ -247,6 +247,7 @@ export const retrieveCampaigns = async (req, res) => {
     const { status, type, category, q } = req.query;
 
     const filter = {};
+    if (req.user?._id) filter.userId = req.user._id;
     if (status) filter.status = status;                // "running" | "pending" | "completed"
     if (type) filter.type = type;                      // "call" | "message"
     if (category) filter.category = category;         // exact category

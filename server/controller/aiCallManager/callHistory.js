@@ -3,12 +3,15 @@ import mongoose from "mongoose";
 import UploadDetails from "../../models/uploadDetails.js";
 import CallLiveStatus from "../../models/callLiveStatus.js";
 import Calls from "../../models/callHistory.js";
+import { getUserCustomerMatch } from "../../helper/userScope.js";
 
 export async function getCallHistory(req, res) {
   try {
     const { limit = 50 } = req.query;
+    const customerMatch = req.user?._id ? await getUserCustomerMatch(req.user._id) : {};
 
     const rows = await CallLiveStatus.aggregate([
+      { $match: customerMatch },
       { $sort: { updated_at_iso: -1 } },
 
       // Get latest update per call
